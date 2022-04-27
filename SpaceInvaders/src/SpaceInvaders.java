@@ -1,68 +1,62 @@
 import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
 import javax.swing.*;
-
-
-
+import javax.swing.border.EmptyBorder;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.*;
 
 
-public class SpaceInvaders extends JFrame implements KeyListener {
 
+public class SpaceInvaders extends JFrame implements KeyListener {
+	
+	private GameEngine controller;
+	private GameView view;
 	private GameHandler handler;
-	private JTextArea textArea = new JTextArea();
+	private JPanel contentPane;
+
+
 	
 	SpaceInvaders()
 	{
-		setTitle("Let's play Space Invaders");
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setSize(900, 600);
-		setVisible(true);
-		setLocationRelativeTo(null);
-		textArea.setFont(new Font("Consolas", Font.PLAIN, 15));
-		textArea.addKeyListener(this);
-		add(textArea);
-		textArea.setEditable(false);
+		initJFrame();
+		initMVC(contentPane);
 		
-		
-		handler = new GameHandler(textArea);
-		new Thread(new GameThread()).start();
-		
+		new Thread(controller).start();
 		
 	}
 	
-	class GameThread implements Runnable
+	private void initMVC(JPanel contentPane) //mvc 초기화, 객체 생성
 	{
-		@Override
-		public void run()
-		{
-			
-			while(!handler.isGameOver())
-			{
-				
-				handler.gameTiming();
-				handler.drawAll(); // render
-				handler.whoWin();
-				
-			
-			}
-			handler.whoWin();
-		}
+		
+		handler = new GameHandler();
+		view = new GameView(contentPane, handler);
+		controller = new GameEngine(view);
 	}
 	
+	private void initJFrame()
+	{
+		
+		setTitle("Let's play Space Invaders");
+		setSize(900, 600);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setVisible(true);
+		
+		// ***** 전체 패널 ***** 
+		contentPane = new JPanel();
+		contentPane.setBorder(new EmptyBorder(0, 0, 0, 0));
+		contentPane.setLayout(new BorderLayout(0,0));
+		setContentPane(contentPane);
+		
+		
+	}
+
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
-		SpaceInvaders mf = new SpaceInvaders();
+		
+		new SpaceInvaders();
 	}
 	
-	public void restart()
-	{	
-		handler.initData();
-		new Thread(new GameThread()).start();
-	}
-
 	@Override
 	public void keyPressed(KeyEvent e)
 	{
@@ -82,16 +76,6 @@ public class SpaceInvaders extends JFrame implements KeyListener {
 		case KeyEvent.VK_SPACE:
 			handler.readyToShoot();
 			break;
-		case KeyEvent.VK_Y:
-			if(handler.isGameOver())
-				restart();
-			break;
-		case KeyEvent.VK_N:
-			if(handler.isGameOver())
-			{	
-				
-				System.exit(0);
-			}
 		
 		
 		}
@@ -109,117 +93,212 @@ public class SpaceInvaders extends JFrame implements KeyListener {
 		
 	}
 	
+
 }
 
-class GameHandler 
+//********************************** 게임 엔진 **********************************
+class GameEngine implements Runnable
 {
+	private GameView view;
+	
+	public GameEngine(GameView view)
+	{
+		this.view = view;
+		
+	}
+	
+	// ****** 게임 루프 ****** (게임 로직을 독립적으로 게임 컨트롤 동작)
+	@Override
+	public void run() 
+	{
+		
+		boolean gameContinues = true;
+		while (gameContinues)
+		{
+			try {
+				Thread.sleep(50);
+			}
+			
+			catch (InterruptedException ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+	}
+}
 
-	private final static int SCREEN_WIDTH = 130;
-	private final static int SCREEN_HEIGHT = 35;
+// ********************************** 그래픽 **********************************
+class GameView extends JPanel  
+{
+	private JPanel panelCard;
+	private JPanel contentPane;
+	
+	private final static String PANEL_NEXT="Start Game";
+	private final static String PANEL_GAME="Game";
+	
+	private GameHandler handler;
+	
+	
+	public GameView(JPanel cont, GameHandler handler)
+	{
+		this.handler = handler;	
+		initPane(cont);
+		makePlaypage();
+		
+	}
+	
+	
+	public void initPane(JPanel cont)
+	{
+		this.contentPane = cont;
+		
+		// ***** 카드 레이아웃 관리 *****
+		panelCard = new JPanel();
+		
+		contentPane.add(panelCard, null);
+		panelCard.setLayout(new CardLayout());
+					
+		// ***** 첫 번째 페이지 *****
+		JPanel startPage = new JPanel();
+		panelCard.add(startPage, "name_1286310151149000");
+		startPage.setLayout(null);
+					
+		// 1. 이미지 배경
+		ImageIcon image = new ImageIcon("image/nasa.jpg");
+		JLabel startBackgroundImage = new JLabel(image);
+		startBackgroundImage.setBounds(40, 23, 800, 400);
+		startPage.add(startBackgroundImage);
+					
+		// 2. 스타트 버튼
+		JButton startButton = new JButton(PANEL_NEXT);
+		startButton.setBounds(0, 450, 886, 100);
+		startPage.add(startButton);
+		startButton.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e)
+			{
+				JButton button = (JButton) e.getSource();
+				CardLayout c1 = (CardLayout) (panelCard.getLayout());
+				c1.show(panelCard, button.getText());
+			}
+		});
+	
+	}
+
+	
+	public void makePlaypage()
+	{
+		// ***** 두 번째 페이지 *****
+		JPanel playPage = new JPanel();
+		playPage.setBackground(Color.DARK_GRAY);
+		panelCard.add(playPage, PANEL_NEXT);
+		playPage.setLayout(new BorderLayout(0,0));
+
+	}
+
+	// ***** 이미지 그래픽 *****
+	@Override
+	public void paintComponent(Graphics g)
+	{
+		super.paintComponent(g);
+		Graphics2D g2d = (Graphics2D) g;
+		
+		fillSidePannel(g2d);
+	}
+
+	private void fillSidePannel(Graphics2D g2d)
+	{
+		g2d.setPaint(new Color(0, 8, 52));
+		g2d.fillRect(750, 0, 150, 600);
+	}
+	
+	private void drawPlayer(Graphics2D g2d)
+	{
+		g2d.drawImage(handler.player.image, handler.player.posX, handler.player.posY, this);
+	}
+	
+	private void drawEnemys(Graphics2D g2d, int x)
+	{
+		g2d.drawImage(handler.enemy.image, handler.enemyList.get(x).posX, handler.enemyList.get(x).posY, this);
+	}
+	
+	private void drawBullet(Graphics2D g2d, int x)
+	{
+		g2d.drawImage(handler.bullet[0].image, handler.bullet[x].posX, handler.bullet[x].posY, this);
+	}
+	
+	private void drawEnemyBullet(Graphics2D g2d, int x)
+	{
+		g2d.drawImage(handler.enemyBullet[0].image, handler.enemyBullet[x].posX, handler.enemyBullet[x].posY, this);
+	}
+	
+	
+	
+
+}
+
+// ********************************** 게임 로직 **********************************
+class GameHandler
+{
+	
+	
+	// 상수 선언
 	private final static int FIELD_WIDTH = 80, FIELD_HEIGHT = 30;
-	private final static int PADDING = 3;
-	private final static int LETTER_PADDING = 1;
-	private final static int INITIAL_VALUE = 0;
 	private final static int EDGE_VALUE = 1, VALID_VALUE = 0;
-	private final static int BLOCK_SIZE = 41;
-	private final static int BULLET_NUM = 10;
+	private final static int INITIAL_VALUE = 0;
+	private final static int LETTER_PADDING = 1;
+	private final static int PADDING = 3;
+		
+	// 상수 선언 - 객체
+	private final static int INITIAL_PLAYERX = 41;
+	private final static int INITIAL_PLAYERY = 27;
+	private final static int INITIAL_ENEMYY = 2;
+	private final static int INITIAL_ENEMYX_1 = 10;
+	private final static int INITIAL_ENEMYX_2 = 15;
 	private final static int ENEMY_NUM = 8;
-	private final static int NOTE_POSX = 30;
-	private final static int NOTE_POSY = 10;
-	//private final static int INIT_SPEED = 20;
-	//private final static int MAX_SPEED = 10;
-
-
-	
-	private final int INITIAL_PLAYERX = 41;
-	private final int INITIAL_PLAYERY = 27;
-	private final int INITIAL_ENEMYY = 2;
-	private final int INITIAL_ENEMYX_1 = 10;
-	private final int INITIAL_ENEMYX_2 = 15;
-	private final int ENEMY_FLAG = 4;
-	private final int ENEMY_MOVE_MAX = 38;
-
-	
-	private JTextArea text;
-	private char[][] buffer;
-	private int field[];
-	private int score;
-	//private int speed, speedCounter;
-	
-
-	ArrayList<EnemyObject> enemyList = new ArrayList<EnemyObject>();
-	Iterator<EnemyObject> enemyItr = enemyList.iterator();
-	/*ArrayList<BulletObject> bulletList = new ArrayList<BulletObject>();
-	
-	Iterator<BulletObject> bulletItr = bulletList.iterator();
-	*/
+	private final static int ENEMY_FLAG = 4;
+	private final static int ENEMY_MOVE_MAX = 38;
+	private final static int BULLET_NUM = 10;
 	
 	
+	// 객체
 	public PlayerObject player;
 	public EnemyObject enemy;
 	public BulletObject bullet[];
 	public EnemyBulletObject enemyBullet[];
 	
+	ArrayList<EnemyObject> enemyList = new ArrayList<EnemyObject>();
+	Iterator<EnemyObject> enemyItr = enemyList.iterator();
+	
+	// 게임 아이템
+	private int score;
+	private int field[];
 	public boolean isGameOver;
 	public boolean enemyMoving;
-	//public boolean forceDown;
 
 	
-	public GameHandler(JTextArea txt)
+	public GameHandler()
 	{
-		text = txt;
-		field = new int[FIELD_WIDTH * FIELD_HEIGHT];
-		buffer = new char[SCREEN_WIDTH][SCREEN_HEIGHT];
-
-		player = new PlayerObject(INITIAL_PLAYERX, INITIAL_PLAYERY, ">-o-<"); 
+		player = new PlayerObject(INITIAL_PLAYERX, INITIAL_PLAYERY);
 		bullet = new BulletObject[BULLET_NUM];
 		enemyBullet = new EnemyBulletObject[BULLET_NUM];
 		
-		enemyMoving = true;
-		isGameOver = false;
-		initData();
 	}
 	
-	
-	public void gameTiming()
-	{
-		try {
-			Thread.sleep(30);
-		}
-		
-		catch(InterruptedException ex)
-		{
-			ex.printStackTrace();
-		}
-		//speedCounter ++;
-		//forceDown = (speedCounter == speed);
-	}
-	
-	
+	// **** Functions ****
 	
 	public void initData()
 	{
+		// 1. 스코어
 		score = INITIAL_VALUE;
-		//speed = INIT_SPEED;
-		//speedCounter = 0;
-		//forceDown = false;
-
 		
+		// 2. 플레이 필드 가용 범위
 		for(int x = INITIAL_VALUE; x < FIELD_WIDTH; x++) 
 			for(int y = 0; y < FIELD_HEIGHT; y++) 
 				field[y * FIELD_WIDTH + x] = (x == 0 || x == FIELD_WIDTH - 1 || y == FIELD_HEIGHT -1) ? EDGE_VALUE : VALID_VALUE;
 		
-		for(int x = INITIAL_VALUE; x < BULLET_NUM; x++)
-		{	
-			bullet[x] = new BulletObject("!", false);
-			//bulletList.add(bullet[x]);
-		}
-			
-		
+		// 3. 적 개체
 		for(int x = INITIAL_VALUE; x < ENEMY_NUM; x++)
 		{
-
-			
 			if(x == INITIAL_VALUE)
 			{	
 				enemy = new EnemyObject(INITIAL_ENEMYX_1, INITIAL_ENEMYY);
@@ -247,116 +326,13 @@ class GameHandler
 			enemyBullet[x] = new EnemyBulletObject(enemyList.get(x).posX + 2, enemyList.get(x).posY - 1, false);
 		}
 		
-		clearBuffer();
-		
-	}
-	
-	public void clearBuffer()
-	{
-		for(int y = INITIAL_VALUE; y < SCREEN_HEIGHT; y++)
+		// 4. 플레이어 총알
+		for(int x = INITIAL_VALUE; x < BULLET_NUM; x++)
 		{	
-			for(int x = 0; x < SCREEN_WIDTH; x++) 
-				buffer[x][y] = '.';
-		}
-	}
-	
-	public boolean isGameOver()
-	{
-		return isGameOver;
-	}
-	
-	public void whoWin()
-	{
-		if(enemyItr.hasNext() == false)
-			playerWin();
-		
-		
-		else if(player.isPlayerLose == true)
-			drawGameOver();
-	}
-	
-	public void playerWin()
-	{
-		drawToBuffer(NOTE_POSX, NOTE_POSY, "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+1, "┃         YOU WIN!!         ┃");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+2, "┃                           ┃");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+3, "┃      PLAY AGAIN? (Y/N)    ┃");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+4, "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛");
-		
-		render();
-	}
-	
-	public void drawGameOver()
-	{
-		drawToBuffer(NOTE_POSX, NOTE_POSY, "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+1, "┃         YOU LOSE!!        ┃");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+2, "┃                           ┃");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+3, "┃      PLAY AGAIN? (Y/N)    ┃");
-		drawToBuffer(NOTE_POSX, NOTE_POSY+4, "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛");
-		
-		render();
-	}
-
-	
-	private void drawToBuffer(int px, int py, String c)
-	{
-		for(int x = INITIAL_VALUE; x < c.length(); x++)
-			buffer[px + x][py] = c.charAt(x);
-	}
-	
-	private void drawToBuffer(int px, int py, char c)
-	{
-		buffer[px+PADDING][py] = c;
-	}
-	
-	private void drawBlock()
-	{
-		for(int x = INITIAL_VALUE; x < BLOCK_SIZE; x++)
-		{
-			drawToBuffer(SCREEN_WIDTH - (PADDING+BLOCK_SIZE), 1, "┌───────────────────┐");
-			drawToBuffer(SCREEN_WIDTH - (PADDING+BLOCK_SIZE), 2, "│ SCORE: " + score + "0         │");
-			drawToBuffer(SCREEN_WIDTH - (PADDING+BLOCK_SIZE), 3, "└───────────────────┘");
-		}
-	}
-	
-	public void drawAll()
-	{
-		for(int x = INITIAL_VALUE; x < FIELD_WIDTH; x++)
-		{
-			// ====== 필드 생성 ======
-			for(int y = INITIAL_VALUE; y < FIELD_HEIGHT; y++)
-				drawToBuffer(x, y, " #".charAt(field[y * FIELD_WIDTH + x])); 
+			bullet[x] = new BulletObject(false);
 		}
 		
-
-		enemyMove();
-		makeImages(); // 플레이어, 적 생성
-		shootBullet();
-		enemyShoot();
-		drawBlock(); // 스코어 블록 생성
-		drawToBuffer(97, 27, "by Y.Kim"); // 제작자 이름
-		
-		render();
 	}
-	
-	private void render()
-	{
-		StringBuilder sb = new StringBuilder();
-		for(int y = INITIAL_VALUE; y < SCREEN_HEIGHT; y++)
-		{
-			for(int x = INITIAL_VALUE; x < SCREEN_WIDTH; x++)
-				{
-					sb.append(buffer[x][y]);
-				}
-			sb.append("\n");
-		}
-		
-		text.setText(sb.toString());
-	}
-	
-
-	
-
 	
 	public void moveToRight()
 	{
@@ -384,9 +360,9 @@ class GameHandler
 	{
 		player.posY --;
 		
-		for(int x = INITIAL_VALUE; x < ENEMY_NUM; x++)
+		for(int x = INITIAL_VALUE; x < enemyList.size(); x++)
 		{
-			if(field[player.posY] == enemyList.get(x).posY)
+			if(player.posY == enemyList.get(x).posY)
 			{
 				isGameOver = true;
 			}
@@ -407,14 +383,11 @@ class GameHandler
 		{
 			player.posY --;
 		}
-		
-		
+
 	}
 	
 	public void readyToShoot()
 	{
-		
-		
 		for(int x = INITIAL_VALUE; x < BULLET_NUM; x++)
 		{
 			
@@ -436,8 +409,7 @@ class GameHandler
 			{
 					
 				bullet[y].posY --;
-				drawToBuffer(bullet[y].posX, bullet[y].posY, bullet[y].image);		
-				
+				// 여기 그래픽 그려 주어야 됨
 				
 				for(int x = INITIAL_VALUE; x < enemyList.size(); x++) // 적한테 닿았을 때
 				{
@@ -450,7 +422,6 @@ class GameHandler
 						
 						enemyList.get(x).isAttacked = true;
 						enemyList.remove(x);
-						
 		
 					}
 				
@@ -469,21 +440,12 @@ class GameHandler
 		
 	}
 	
-	public void makeImages()
-	{
-		drawToBuffer(player.posX, player.posY, player.image);
-			
-	}
-	
-
-	
 	public void enemyMove()
 	{
 	
-		if(enemyMoving)
+		if(enemyMoving) // 왜 총알에 맞았는데도 작동되지?? -> 이동시킬 애가 있는 경우 하기
 		{
-			if(enemyList.get(INITIAL_VALUE).posX >= ENEMY_MOVE_MAX)
-		
+			if(enemyList.get(INITIAL_VALUE).posX >= ENEMY_MOVE_MAX) // 왼->오 벽에 닿는 조건: 두번째줄 마지막 에너미가 벽에 닿았을 때 (enemy.get(마지막).posX >= field_width - 1) 	
 			{
 				for(int i=INITIAL_VALUE; i < enemyList.size(); i++)
 					enemyList.get(i).posY ++;
@@ -494,17 +456,13 @@ class GameHandler
 			else 
 			{
 				for(int i=INITIAL_VALUE; i<enemyList.size(); i++)
-				{
 					enemyList.get(i).posX ++;
-			
-				}				
-			
+	
 			}
 		}
 			
 		else
 		{
-		
 			if(enemyList.get(INITIAL_VALUE).posX <= INITIAL_ENEMYX_1)
 			{
 				for(int i=INITIAL_VALUE; i < enemyList.size(); i++)
@@ -517,28 +475,21 @@ class GameHandler
 			else
 			{
 				for(int i=INITIAL_VALUE; i<enemyList.size(); i++)
-				{
 					enemyList.get(i).posX --;
-					
-				}
-				gameTiming();
-				
 			}
 			
 		}
 		
 		
-		for(int x = INITIAL_VALUE; x < enemyList.size(); x++)
-			if(enemyList.get(x).isAttacked == false)
-				drawToBuffer(enemyList.get(x).posX, enemyList.get(x).posY, enemyList.get(x).image());
+		/* for(int x = INITIAL_VALUE; x < enemyList.size(); x++)
+			if(enemyList.get(x).isAttacked == false) 
+			*/
+				
 		
 	}
 
 	public void enemyShoot()
 	{
-		//if(forceDown)
-		gameTiming();
-		
 			int num = (int)(Math.random() * 7);
 			
 			enemyBullet[num].isEnemyShoot = true;
@@ -548,7 +499,7 @@ class GameHandler
 				if(enemyBullet[i].isEnemyShoot == true)
 				{
 					enemyBullet[i].posY++;
-					drawToBuffer(enemyBullet[i].posX, enemyBullet[i].posY, enemyBullet[i].image);
+					// 적 그리기 그래픽 해 줘야 됨 여기
 					
 					if(enemyBullet[i].posX >= player.posX && enemyBullet[i].posX < player.posX + 5 && enemyBullet[i].posY == player.posY)
 					{
@@ -568,178 +519,82 @@ class GameHandler
 						enemyBullet[i].posY = enemyList.get(i).posY;
 					}
 				}
-				
 			
+			}
+	}
+	
+	
+	
+	
+	// ********************************** 게임 오브젝트 **********************************
+	abstract class GameObject
+	{
+		protected int posX;
+		protected int posY;
+		protected Image image;
+		
+	}
+
+	class PlayerObject extends GameObject
+	{
+		private boolean isPlayerLose = false;
+		
+		public PlayerObject(int x, int y)
+		{
+			posX = x;
+			posY = y;
+			image = new ImageIcon("player.png").getImage();
 		}
-		//speedCounter = 0;
-				
 	}
-	
 
-abstract class GameObject
-{
-	
-	protected int posX;
-	protected int posY;
-	protected String image;
-	
-	abstract public String image();
-	abstract public int posX();
-	abstract public int posY();
+	class EnemyObject extends GameObject
+	{
+		boolean isAttacked;
 
-}
+		public EnemyObject(int x, int y)
+		{
+			posX = x;
+			posY = y;
+			image = new ImageIcon("enemy.png").getImage();
+			isAttacked = false;
 
-class PlayerObject extends GameObject
-{
-	private boolean isPlayerLose = false;
-	
-	public PlayerObject(int x, int y, String look)
-	{
-		posX = x;
-		posY = y;
-		image = look;
+		}
 	}
-	
-	public String image()
-	{
-		return image;
-	}
-	
-	public int posX()
-	{
-		return posX;
-	}
-	
-	public int posY()
-	{
-		return posY;
-	}
-	
-	public int posX(int px)
-	{
-		posX = px;
-		return posX;
-	}
-	
-	public int posY(int py)
-	{
-		posY = py;
-		return posY;
-	}
-}
 
-class EnemyObject extends GameObject
-{
-	boolean isAttacked;
+	class EnemyBulletObject extends GameObject
+	{
+		private boolean isEnemyShoot;
+		
+		public EnemyBulletObject(int x, int y, boolean answer)
+		{
+			posX = x;
+			posY = y;
+			image = new ImageIcon("enemy bullet.png").getImage();
+			isEnemyShoot = answer;
+		}
+	}
 
-	public EnemyObject(int x, int y)
-	{
-		posX = x;
-		posY = y;
-		image = "[XUX]";
-		isAttacked = false;
 
-	}
-	
-	public String image()
+	class BulletObject extends GameObject
 	{
-		return image;
-	}
-	
-	public int posX()
-	{
-		return posX;
-	}
-	
-	public int posY()
-	{
-		return posY;
-	}
-	
-	public int posX(int px)
-	{
-		posX = px;
-		return posX;
-	}
-	
-	public int posY(int py)
-	{
-		posY = py;
-		return posY;
+
+		private boolean isKeyPressed;
+		
+		public BulletObject(boolean answer) 
+		{
+			posX = player.posX + 2;
+			posY = player.posY - 1;
+			image = new ImageIcon("bullet.png").getImage();
+			isKeyPressed = answer;
+		}
+		
+		public void clearPos()
+		{
+			posX = player.posX + 2;
+			posY = player.posY - 1;
+		}
+		
 	}
 	
 }
 
-class EnemyBulletObject extends GameObject
-{
-	private boolean isEnemyShoot;
-	
-	public EnemyBulletObject(int x, int y, boolean answer)
-	{
-		posX = x;
-		posY = y;
-		image = "v";
-		isEnemyShoot = answer;
-	}
-	
-	public String image()
-	{
-		return image;
-	}
-	
-	public int posX()
-	{
-		return posX;
-	}
-	
-	public int posY()
-	{
-		return posY;
-	}
-	
-
-	
-}
-
-
-
-
-
-class BulletObject extends GameObject
-{
-
-	private boolean isKeyPressed;
-	
-	public BulletObject(String look, boolean answer) 
-	{
-		posX = player.posX + 2;
-		posY = player.posY - 1;
-		image = look;
-		isKeyPressed = answer;
-	}
-	
-	public String image()
-	{
-		return image;
-	}
-	
-	public int posX()
-	{
-		return posX;
-	}
-	
-	public int posY()
-	{
-		return posY;
-	}
-	
-
-	
-	public void clearPos()
-	{
-		posX = player.posX + 2;
-		posY = player.posY - 1;
-	}
-	
-}
-}
